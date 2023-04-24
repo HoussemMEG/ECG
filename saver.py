@@ -12,6 +12,7 @@ class Saver:
         self._verbose = verbose
         self._set_name = self._init_set_name(set_name)
         self._save = save
+        self._base_folder = "D:/ECG"  # "."
 
         # self._init_conditions(conditions)
         self._conditions = conditions
@@ -30,7 +31,7 @@ class Saver:
         if not self._save:
             return
 
-        with h5py.File(f'./features/{self._session}/{self._set_name}_features.hdf5', 'a') as f:
+        with h5py.File(f'{self._base_folder}/features/{self._session}/{self._set_name}_features.hdf5', 'a') as f:
             # Create label dataset
             f['labels'].create_dataset(name=str(exam_id), data=[label])
 
@@ -62,7 +63,7 @@ class Saver:
         data.pop('self', None)
 
         # Create directory for file if it doesn't exist
-        directory = f'./features/{self._session}'
+        directory = f'{self._base_folder}/features/{self._session}'
         os.makedirs(directory, exist_ok=True)
 
         # Save file
@@ -81,7 +82,7 @@ class Saver:
                 print_c('JSON file <{: <27} saved at: {:}>'.format(file_name, directory), 'yellow', bold=True)
 
     def _create_folder(self):
-        directory = f'./features/{self._session}'
+        directory = f'{self._base_folder}/features/{self._session}'
         os.makedirs(directory, exist_ok=True)
         if self._verbose:
             print_c('HDF5 container has been crated at: <{:}>\n'.format(directory), 'yellow', bold=True)
@@ -91,13 +92,13 @@ class Saver:
             print_c(f'/!\\ Saving is disabled', 'red', bold=True)
             return
 
-        if not os.path.isdir(f'./features/{self._session}'):
+        if not os.path.isdir(f'{self._base_folder}/features/{self._session}'):
             # create empty folder
             self._create_folder()
 
             # create the features hdf5 container with the corresponding conditions
-        if not os.path.isfile(f'./features/{self._session}/{self._set_name}_features.hdf5'):
-            with h5py.File(f'./features/{self._session}/{self._set_name}_features.hdf5', 'w') as f:
+        if not os.path.isfile(f'{self._base_folder}/features/{self._session}/{self._set_name}_features.hdf5'):
+            with h5py.File(f'{self._base_folder}/features/{self._session}/{self._set_name}_features.hdf5', 'w') as f:
                 f.create_dataset('conditions', data=self._conditions)
                 f.create_group('features')
                 f.create_group('labels')

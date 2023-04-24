@@ -162,20 +162,16 @@ def decompress(compressed_features: dict) -> List[np.ndarray]:
 
 
 def decompress_hdf5(feature_group):
-    decompressed_features = []
-    x0 = feature_group['x0']
     u = feature_group['u']
-
     n_target = len(u['idx'].keys())
     n_features = u['n_features'][0]
+    n_path = u['n_path'][0]
+
+    decompressed_features = np.zeros((n_target, n_features, n_path))
     for target_idx in range(n_target):
         idx = u['idx'][str(target_idx)]
-        val = u['val'][str(target_idx)]
-        n_path = u['n_path'][target_idx]
-        features = np.zeros((n_features, n_path))
-        features[tuple(idx)] = val
-        decompressed_features.append(features)
-    return np.array(decompressed_features), x0  # shape (n_target, n_features, n_path)
+        decompressed_features[target_idx, idx[0], idx[1]] = u['val'][str(target_idx)]
+    return decompressed_features, feature_group['x0']  # shape (n_target, n_features, n_path)
 
 
 def duplicate_element(input_list: list, indexes: list, repeat: int) -> list:
@@ -334,9 +330,11 @@ def read_parameters(session):
     """
     # Reading the JSON files
     parameters = {}
-    for file in os.listdir(f'./features/{session}'):
+    # for file in os.listdir(f'./features/{session}'):
+    for file in os.listdir(f'D:/ECG/features/{session}'):
         if file in ['DFG_parameters.json', 'preprocessing_parameters.json']:
-            parameters_path = f'./features/{session}/{file}'
+            # parameters_path = f'./features/{session}/{file}'
+            parameters_path = f'D:/ECG/features/{session}/{file}'
             with open(parameters_path) as f:
                 parameters.update(json.load(f))
 
@@ -376,6 +374,28 @@ def update_table(table, parsimony, scores, highlight_above):
             table[-1].append('-')
 
 
+
+def convolution2d(image):
+    # kernel = np.ones((10, 10))
+
+    l=30
+    sig=3
+    ax = np.linspace(-(l - 1) / 2., (l - 1) / 2., l)
+    gauss = np.exp(-0.5 * np.square(ax) / np.square(sig))
+    kernel = np.outer(gauss, gauss)
+    kernel /= np.sum(kernel)
+
+
+    m, n = kernel.shape
+    if m == n:
+        y, x = image.shape
+        new_image = np.zeros((y,x))
+        y = y - m + 1
+        x = x - m + 1
+        for i in range(y):
+            for j in range(x):
+                new_image[i][j] = np.sum(image[i:i+m, j:j+m] * kernel)
+    return new_image
 
 """
 

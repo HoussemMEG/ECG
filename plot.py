@@ -355,6 +355,7 @@ class Plotter:
                       or red (instead of being a color in between).
         :return: /
         """
+
         # Setting some parameters
         n_category = x.shape[0]
         n_lead = x.shape[1]
@@ -364,9 +365,10 @@ class Plotter:
         n_point = int(n_feature / n_freq)
 
         # Color map choice and settings
-        if cmap.lower() not in ['black_white', 'blue_red']:
+        supported_cmap = ['black_white', 'blue_red', 'twilight']
+        if cmap.lower() not in supported_cmap:
             raise ValueError('Plot control cmap_type supported {:} but {:} were given'
-                             .format(['black_white', 'blue_red'], cmap.lower()))
+                             .format(supported_cmap, cmap.lower()))
         if cmap == 'black_white':
             cmap = ListedColormap(['k', 'w'], name='binary')
             x[x != 0] = 1
@@ -378,6 +380,15 @@ class Plotter:
             white_zero = list(map(cmap, range(255)))
             white_zero[127] = (1.0, 1.0, 1.0, 1.0)
             cmap = cmap.from_list('my_map', white_zero, N=255)
+            vmin = -vmax
+
+        elif cmap == 'twilight':
+            plt.style.use('dark_background')
+            cmap = plt.get_cmap('twilight').copy()
+            cmap = truncate_colormap(cmap, 0.1, 0.9, 255)
+            black_zero = list(map(cmap, range(255)))
+            black_zero[127] = (0.0, 0.0, 0.0, 1.0)
+            cmap = cmap.from_list('my_map', black_zero, N=255)
             vmin = -vmax
 
         # reshaping the data to (n_category, n_target, n_freq, n_point, n_path)
@@ -397,6 +408,8 @@ class Plotter:
             axes = [axes]
 
         for i in range(n_category):
+            for gg in range(12):
+                x[i, gg, :, :, -1] = utils.convolution2d(x[i, gg, :, :, -1])
             mat = axes[i].imshow(x[i, 0, ..., -1], interpolation='nearest', aspect='auto', origin='upper',  # 'auto'  'equal'
                                  cmap=cmap, vmax=vmax, vmin=vmin)
             mats.append(mat)

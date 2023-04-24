@@ -31,6 +31,7 @@ class Reader:
         self._n = kwargs.get('n', 1)
         self._stratified = stratified
         self.conditions = ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST']  # do not modify
+        self.n_split = 0
 
         # Read and prepare the description dictionary that contains all the subjects information
         self.description = pd.read_csv(self._path + '/exams.csv')
@@ -173,7 +174,8 @@ class Reader:
         :param: random: Whether to randomize the order of the exam data (default False)
         :return: A tuple of two numpy arrays, containing features and labels
         """
-        file_path = f'./features/{session}/{set_name}_features.hdf5'
+        # file_path = f'./features/{session}/{set_name}_features.hdf5'  # reading time 227 s
+        file_path = f'D:/ECG/features/{session}/{set_name}_features.hdf5'  # reading time 223 s
         with h5py.File(file_path, 'r') as f:
             # Get the list of all conditions in the file
             all_conditions = [x.decode('utf-8') for x in f['conditions']]
@@ -193,9 +195,9 @@ class Reader:
 
             # Generate splits for the exams based on the batch size
             add_batch = 0 if n_exams % self._batch_size == 0 else 1
-            n_split = len(exams) // self._batch_size + add_batch
-            if n_split > 1:
-                skf = StratifiedKFold(n_splits=n_split, shuffle=random)
+            self.n_split = len(exams) // self._batch_size + add_batch
+            if self.n_split > 1:
+                skf = StratifiedKFold(n_splits=self.n_split, shuffle=random)
                 splits = skf.split(exams, labels)
             else:
                 splits = [range(len(exams))]
@@ -204,9 +206,9 @@ class Reader:
             for k, exams_to_read in enumerate(splits):
                 if len(exams_to_read) == 2:
                     exams_to_read = exams_to_read[-1]
-                x = np.zeros((len(exams_to_read), n_targets, n_features, n_path))
+                x = np.empty((len(exams_to_read), n_targets, n_features, n_path))
                 y = np.empty((len(exams_to_read),), dtype=int)
-                for i, exam_idx in enumerate(tqdm(exams_to_read, desc=f'Batch {k+1}/{n_split}')):
+                for i, exam_idx in enumerate(tqdm(exams_to_read, desc=f'Batch {k+1 : >2}/{self.n_split}')):
                     features, x0 = decompress_hdf5(f['features'][exams[exam_idx]])
                     x[i] = features
                     y[i] = labels[exam_idx]

@@ -16,8 +16,8 @@ condition = ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']
 # condition = ['RBBB', 'HEALTHY']
 
 # clf = [LinearDiscriminantAnalysis(solver='svd', shrinkage=None, priors=None, covariance_estimator=None) for _ in range(12 * 50)]
-# clf = [QuadraticDiscriminantAnalysis() for _ in range(12 * 50)]
-clf = [RandomForestClassifier(max_depth=10, max_leaf_nodes=100, warm_start=False, random_state=42, n_jobs=-1) for _ in range(12 * 50)]
+clf = [QuadraticDiscriminantAnalysis() for _ in range(12 * 50)]
+# clf = [RandomForestClassifier(max_depth=10, max_leaf_nodes=100, warm_start=False, random_state=42, n_jobs=-1) for _ in range(12 * 50)]
 
 batch_size = 200
 pca_n_comp = 10

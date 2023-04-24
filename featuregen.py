@@ -163,7 +163,7 @@ class DFG:
 
         self._verbose = kwargs.get('verbose', False)
 
-    @utils.execution_time
+    # @utils.execution_time
     def generate(self, y: np.ndarray) -> Tuple[Optional[List[np.ndarray]], Optional[List[np.ndarray]]]:
         """
         Main method that generates the features given a signal {y}
