@@ -1,0 +1,8 @@
+/venv/
+/data
+/.idea
+/figures
+/__pycache__
+/features/
+/features backup/
+/try.py
