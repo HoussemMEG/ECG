@@ -277,21 +277,7 @@ class Plotter:
 
         # Color map choice and settings
         cmap_choice = cmap
-        if cmap.lower() not in ['black_white', 'blue_red']:
-            raise ValueError('Plot control cmap_type supported {:} but {:} were given'
-                             .format(['black_white', 'blue_red'], cmap.lower()))
-        if cmap == 'black_white':
-            cmap = ListedColormap(['k', 'w'], name='binary')
-            x[x != 0] = 1
-            vmin, vmax, = 0, 1
-
-        elif cmap == 'blue_red':
-            cmap = plt.get_cmap('seismic').copy()
-            cmap = truncate_colormap(cmap, 0.2, 0.8, 255)
-            white_zero = list(map(cmap, range(255)))
-            white_zero[127] = (1.0, 1.0, 1.0, 1.0)
-            cmap = cmap.from_list('my_map', white_zero, N=255)
-            vmin = -vmax
+        cmap, vmin, vmax, x = utils.get_cmap(cmap, x, vmax)
 
         # reshaping the data
         try:
@@ -339,7 +325,8 @@ class Plotter:
         sliders.append(slider)
 
     @staticmethod
-    def plot_control_only(x=None, freq=None, cmap='blue_red', condition=None, fig_name=None, show=True, save=False, vmax=0.1):
+    def plot_control_only(x=None, freq=None, cmap='blue_red', condition=None, fig_name=None, filter=False,
+                          select=(None, None, None, None), show=True, save=False, vmax=0.1):
         """
         :param: x: generated SDF along alpha path, shape (n_freq, n_path).
         :param: y: real signal shape (n_point,).
@@ -355,7 +342,6 @@ class Plotter:
                       or red (instead of being a color in between).
         :return: /
         """
-
         # Setting some parameters
         n_category = x.shape[0]
         n_lead = x.shape[1]
@@ -365,39 +351,21 @@ class Plotter:
         n_point = int(n_feature / n_freq)
 
         # Color map choice and settings
-        supported_cmap = ['black_white', 'blue_red', 'twilight']
-        if cmap.lower() not in supported_cmap:
-            raise ValueError('Plot control cmap_type supported {:} but {:} were given'
-                             .format(supported_cmap, cmap.lower()))
-        if cmap == 'black_white':
-            cmap = ListedColormap(['k', 'w'], name='binary')
-            x[x != 0] = 1
-            vmin, vmax, = 0, 1
-
-        elif cmap == 'blue_red':
-            cmap = plt.get_cmap('seismic').copy()
-            cmap = truncate_colormap(cmap, 0.2, 0.8, 255)
-            white_zero = list(map(cmap, range(255)))
-            white_zero[127] = (1.0, 1.0, 1.0, 1.0)
-            cmap = cmap.from_list('my_map', white_zero, N=255)
-            vmin = -vmax
-
-        elif cmap == 'twilight':
-            plt.style.use('dark_background')
-            cmap = plt.get_cmap('twilight').copy()
-            cmap = truncate_colormap(cmap, 0.1, 0.9, 255)
-            black_zero = list(map(cmap, range(255)))
-            black_zero[127] = (0.0, 0.0, 0.0, 1.0)
-            cmap = cmap.from_list('my_map', black_zero, N=255)
-            vmin = -vmax
+        cmap, vmin, vmax, x = utils.get_cmap(cmap, x, vmax)
 
         # reshaping the data to (n_category, n_target, n_freq, n_point, n_path)
         try:
-            print(x.shape)
             x = np.transpose(np.split(x, n_point, axis=2), (1, 2, 3, 0, 4))
 
         except ValueError:
             x = np.transpose(np.split(x, n_point - 1, axis=2), (1, 2, 3, 0, 4))
+
+        # Selection box delimiters
+        xmin = select[0] if select[0] is not None else 0
+        xmax = select[1] if select[1] is not None else x.shape[3]
+        ymin = select[2] if select[2] is not None else 0
+        ymax = select[3] if select[3] is not None else x.shape[2]
+
 
         fig, axes = plt.subplots(nrows=n_category, figsize=(19.2 / 1.6, 10.8 / 1.6), dpi=100)
         fig.subplots_adjust(bottom=0.1, left=0.075, right=0.90, top=0.98)
@@ -408,8 +376,15 @@ class Plotter:
             axes = [axes]
 
         for i in range(n_category):
-            for gg in range(12):
-                x[i, gg, :, :, -1] = utils.convolution2d(x[i, gg, :, :, -1])
+            if filter:
+                for j in range(n_lead):
+                    x[i, j, :, :, -1] = utils.convolution2d(x[i, j, :, :, -1])
+
+            if any(select):
+                rect = plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin, linestyle='--', fill='forestgreen',
+                                     lw=1, color='forestgreen', alpha=0.2)
+                axes[i].add_patch(rect)
+
             mat = axes[i].imshow(x[i, 0, ..., -1], interpolation='nearest', aspect='auto', origin='upper',  # 'auto'  'equal'
                                  cmap=cmap, vmax=vmax, vmin=vmin)
             mats.append(mat)

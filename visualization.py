@@ -23,7 +23,7 @@ condition = ['1dAVb', 'RBBB', 'LBBB', 'HEALTHY', 'SB', 'AF', 'ST']
 all_category = [0, 1, 2, 6, 3, 4, 5]
 
 
-batch_size = 15
+batch_size = 10
 reader = Reader(batch_size=batch_size * len(condition))
 plotter = Plotter()
 parameters = read_parameters(session)
@@ -49,6 +49,7 @@ if diff:
         data[i] -= temp
 
 plotter.plot_control_only(x=data, freq=parameters['model_freq'], cmap='blue_red', condition=condition,
+                          filter=False, select=(None, None, None, None),  # (time_min, time_max, freq_min, freq_max)
                           show=True, save=False, vmax=vmax)
 
 plt.show()

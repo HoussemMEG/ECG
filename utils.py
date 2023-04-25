@@ -10,15 +10,14 @@ import scipy.signal as ss
 import termcolor
 from matplotlib.mlab import psd
 from scipy.integrate import simpson
+from matplotlib.colors import ListedColormap
+import matplotlib.pyplot as plt
 
 # old stuff imports
 import os
 import json
-import pandas as pd
-from tqdm import tqdm  # newly installed
 from scipy.stats import kurtosis, skew
 from tabulate import tabulate  # newly installed
-from sklearn.model_selection import StratifiedKFold, LeaveOneOut
 
 
 def execution_time(function):
@@ -373,6 +372,34 @@ def update_table(table, parsimony, scores, highlight_above):
             table[1].append('{:.1f}'.format(train_acc_pars))
             table[-1].append('-')
 
+
+def get_cmap(cmap, x, vmax):
+    supported_cmap = ['black_white', 'blue_red', 'twilight']
+    if cmap.lower() not in supported_cmap:
+        raise ValueError('Plot control cmap_type supported {:} but {:} were given'
+                         .format(supported_cmap, cmap.lower()))
+    if cmap == 'black_white':
+        cmap = ListedColormap(['k', 'w'], name='binary')
+        x[x != 0] = 1
+        vmin, vmax, = 0, 1
+
+    elif cmap == 'twilight':
+        plt.style.use('dark_background')
+        cmap = plt.get_cmap('twilight').copy()
+        cmap = truncate_colormap(cmap, 0.1, 0.9, 255)
+        black_zero = list(map(cmap, range(255)))
+        black_zero[127] = (0.0, 0.0, 0.0, 1.0)
+        cmap = cmap.from_list('my_map', black_zero, N=255)
+        vmin = -vmax
+
+    elif cmap == 'blue_red':
+        cmap = plt.get_cmap('seismic').copy()
+        cmap = truncate_colormap(cmap, 0.2, 0.8, 255)
+        white_zero = list(map(cmap, range(255)))
+        white_zero[127] = (1.0, 1.0, 1.0, 1.0)
+        cmap = cmap.from_list('my_map', white_zero, N=255)
+        vmin = -vmax
+    return cmap, vmin, vmax, x
 
 
 def convolution2d(image):
