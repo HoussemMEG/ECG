@@ -356,7 +356,6 @@ class Plotter:
         # reshaping the data to (n_category, n_target, n_freq, n_point, n_path)
         try:
             x = np.transpose(np.split(x, n_point, axis=2), (1, 2, 3, 0, 4))
-
         except ValueError:
             x = np.transpose(np.split(x, n_point - 1, axis=2), (1, 2, 3, 0, 4))
 
@@ -378,6 +377,9 @@ class Plotter:
         for i in range(n_category):
             if filter:
                 for j in range(n_lead):
+                    # x[i, j, 30:55, 200:225, -1] = np.ones((25, 25))
+                    x[i, j, -5, -10, -1] = 0.01
+                    # if i == 2:
                     x[i, j, :, :, -1] = utils.convolution2d(x[i, j, :, :, -1])
 
             if any(select):
@@ -397,7 +399,6 @@ class Plotter:
             axes[i].tick_params(top=True, direction='out', which='both')
             axes[i].yaxis.set_minor_locator(AutoMinorLocator())
             axes[i].tick_params(which='major', length=5)
-            axes[i].set_xticklabels([])
             if i == n_category - 1:
                 axes[i].set_xlabel('Time [index]')
             else:

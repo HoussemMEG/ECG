@@ -26,17 +26,54 @@ def compute_SDF(working_q, output_q):
     feature_gen = DFG(method='LARS',
                       f_sampling=400,
                       version=1,
-                      alpha=[0.00016, 0.00018, 0.00012, 0.00016, 0.00011, 0.00013, 0.00018, 0.00021, 0.00027, 0.00033, 0.00033, 0.00026],
                       find_alpha=False,
+                      alpha=
+[4.787702659576522e-05,  # norm 1 15 not linear
+2.3627672188977043e-05,
+1.2352883636583077e-05,
+4.475951929568429e-05,
+4.267946195702661e-05,
+8e-06,
+4.705771756702215e-05,
+3.557315543166973e-05,
+4.887744620686626e-05,
+5.683074772817117e-05,
+5.367905314928227e-05,
+5.010285722811119e-05],
+# [9.90631206274119e-05,  # norm 1 15 linear
+# 4.617132061900716e-05,
+# 4.6442337316798124e-05,
+# 8.676178376205342e-05,
+# 7.316775381557201e-05,
+# 9.615317264581369e-06,
+# 0.00012775455781039122,
+# 7.996137813599726e-05,
+# 9.92338606197048e-05,
+# 0.00010617591021243318,
+# 9.222522523212072e-05,
+# 0.00011398552096659971],
+# [0.0002915755038538095,  # norm 1 40
+# 0.00012832228042031045,
+# 0.00015320293930004702,
+# 0.00019967338769137465,
+# 0.00014141977992421104,
+# 2.2745480254667374e-05,
+# 0.00024628487920557444,
+# 0.0001436398058292517,
+# 0.00036672124995895894,
+# 0.00023668815048808007,
+# 0.00032024193954566704,
+# 0.0002947571533584827],
+                      #[0.00016, 0.00018, 0.00012, 0.00016, 0.00011, 0.00013, 0.00018, 0.00021, 0.00027, 0.00033, 0.00033, 0.00026],
+                      model_freq=np.linspace(3, 45, 18, endpoint=True),
                       normalize=True,
-                      model_freq=np.linspace(3, 45, 40, endpoint=True),
                       damping=None,  # (under-damped 0.008 / over-damped 0.09)
                       fit_path=True, ols_fit=True,
                       fast=True,
-                      selection=0.02,
+                      selection=0.02,  # 0.02
                       selection_alpha=None,
                       omit=None,  # omit either 'x0' or 'u' from y_hat computation
-                      plot=(False, False), show=True, fig_name="fig name", save_fig=False,
+                      plot=(False, True), show=True, fig_name="fig name", save_fig=False,
                       verbose=verbose)
 
     while True:
@@ -45,7 +82,6 @@ def compute_SDF(working_q, output_q):
             exam_id = temp[0]
             y = temp[-1]
             features, x0 = feature_gen.generate(y)
-            print(np.count_nonzero(features))
             features, x0 = utils.compress(features), utils.ndarray_to_list(x0)
             output_q.put((exam_id, features, x0))
             plt.show()
@@ -59,18 +95,18 @@ def compute_SDF(working_q, output_q):
 
 if __name__ == '__main__':
     # Parameters
-    cpu_count = 1
+    cpu_count = 5
     conditions = ['HEALTHY']  # ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']
-    random = True
+    random = False
 
     # Init the class instances'
     session = datetime.now().strftime("%Y-%m-%d %H;%M")
     session = "2023-04-06 66;66 test"
     set_name = 'train'  # ['train', 'validation', 'test', 'learning']
-    reader = Reader(batch_size=10, n=1, stratified=True, set_name=set_name)
+    reader = Reader(batch_size=1, n=1, stratified=True, set_name=set_name)
     plotter = Plotter(show=False, save=False)
-    preprocess = Preprocess(fs=400, before=0.2, after=0.4)  # 0.1 / 0.4
-    saver = Saver(session=session, set_name=set_name, conditions=Reader.ALL_CONDITIONS, save=False, verbose=True)
+    preprocess = Preprocess(fs=400, before=0.2, after=0.4)  # after = 0.1 or 0.4
+    saver = Saver(session=session, set_name=set_name, conditions=Reader.ALL_CONDITIONS, save=True, verbose=True)
 
     tic = time.perf_counter()
     # Read data
@@ -127,19 +163,35 @@ if __name__ == '__main__':
 """
 
 """
-    alpha for np.linspace(3, 45, 40, endpoint=True) (-0.2, 0.4)
+alpha for np.linspace(3, 45, 40, endpoint=True) 
+    (-0.2, 0.4)
         [0.00016, 0.00018, 0.00012, 0.00016, 0.00011, 0.00013, 0.00018, 0.00021, 0.00027, 0.00033, 0.00033, 0.00026],
-    
-    alpha for np.linspace(3, 45, 70, endpoint=True) (-0.2, 0.4)
+
+
+alpha for np.linspace(3, 45, 70, endpoint=True) 
+    (-0.2, 0.4)
         [0.00016, 0.00018, 0.00013, 0.00016, 0.00012, 0.00013, 0.00019, 0.00023, 0.00027, 0.00036, 0.00033, 0.00026],
-        
-    alpha for np.linspace(3, 45, 10, endpoint=True) (-0.2, 0.4)
-        [0.00003, 0.00004, 0.00003, 0.00003, 0.00003, 0.00003, 0.00005, 0.00005, 0.00006, 0.00007, 0.00007, 0.00005], 
+   
     
-    alpha for np.linspace(3, 45, 35, endpoint=True) (-0.2, 0.4)
+alpha for np.linspace(3, 45, 10, endpoint=True) 
+    (-0.2, 0.4)
+        [0.00003, 0.00004, 0.00003, 0.00003, 0.00003, 0.00003, 0.00005, 0.00005, 0.00006, 0.00007, 0.00007, 0.00005], 
+
+
+alpha for np.linspace(3, 45, 35, endpoint=True) 
+    (-0.2, 0.4)
         [0.00016, 0.00018, 0.00012, 0.00016, 0.00011, 0.00013, 0.00017, 0.00021, 0.00026, 0.00034, 0.00032, 0.00025],
-        
-        
-    alpha for np.linspace(3, 45, 40, endpoint=True) (-0.2, 0.4)  2 % error
-        [0.00035, 0.00038, 0.00025, 0.00035, 0.00023, 0.00027, 0.00041, 0.00048, 0.00057, 0.00067, 0.00069, 0.00056],
+    (-0.2, 0.1)
+        [0.00033, 0.00039, 0.00023, 0.00034, 0.00022, 0.00027, 0.00038, 0.00046, 0.00060, 0.00067, 0.00066, 0.00056],
+
+alpha for np.linspace(3, 45, 25, endpoint=True) 
+    (-0.2, 0.4)
+    (-0.2, 0.1) 
+        [0.00030, 0.00034, 0.00022, 0.00032, 0.00020, 0.00025, 0.00036, 0.00043, 0.00050, 0.00062, 0.00063, 0.00050],
+
+
+alpha for np.linspace(3, 45, 10, endpoint=True) 
+    (-0.2, 0.4)
+    (-0.2, 0.1) 
+        [0.00017, 0.00020, 0.00014, 0.00018, 0.00012, 0.00015, 0.00021, 0.00025, 0.00031, 0.00036, 0.00039, 0.00031],
 """

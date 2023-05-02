@@ -403,26 +403,28 @@ def get_cmap(cmap, x, vmax):
 
 
 def convolution2d(image):
+    # Square kernel
     # kernel = np.ones((10, 10))
 
-    l=30
-    sig=3
+    # Gaussian kernel
+    l, sigma = 5, 1  # l = 7
     ax = np.linspace(-(l - 1) / 2., (l - 1) / 2., l)
-    gauss = np.exp(-0.5 * np.square(ax) / np.square(sig))
+    gauss = np.exp(-0.5 * np.square(ax) / np.square(sigma))
     kernel = np.outer(gauss, gauss)
+
     kernel /= np.sum(kernel)
-
-
     m, n = kernel.shape
-    if m == n:
-        y, x = image.shape
-        new_image = np.zeros((y,x))
-        y = y - m + 1
-        x = x - m + 1
-        for i in range(y):
-            for j in range(x):
-                new_image[i][j] = np.sum(image[i:i+m, j:j+m] * kernel)
-    return new_image
+
+    y, x = image.shape
+    output = np.zeros_like(image)
+    image_padded = np.zeros((y + (m - 1), x + (n - 1)))
+    image_padded[(m // 2):-(m // 2), (n // 2):-(n // 2)] = image
+
+    for i in range(y):
+        for j in range(x):
+            output[i][j] = np.sum(image_padded[i:i+m, j:j+m] * kernel)
+
+    return output
 
 """
 

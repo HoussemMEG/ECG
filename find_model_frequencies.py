@@ -17,11 +17,11 @@ matplotlib.use('QT5agg')
 
 
 # parameters
-m_pendulum = 40
+m_pendulum = 15
 leads = np.array(['DI', 'DII', 'DIII', 'AVR', 'AVL', 'AVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'])
 
 # init the class instances
-reader = Reader(batch_size=1000, n=1)
+reader = Reader(batch_size=500, n=1)
 plotter = Plotter(show=True, save=False)
 preprocess = Preprocess(fs=400, before=0.2, after=0.4)
 
@@ -31,7 +31,7 @@ tic = time.perf_counter()
 for x, meta_data in reader.read(condition=condition, random=False):
     exams_id = meta_data['exam_id'].to_numpy()
     # plotter.plot_signal(x, meta_data=meta_data, select_lead=[])
-    x, r_peaks, epochs = preprocess.process(x, meta_data)
+    x, r_peaks, epochs, meta_data = preprocess.process(x, meta_data)
     # plotter.plot_signal(x, meta_data=meta_data, r_peaks=r_peaks, select_lead=[])
     # plotter.plot_epochs(epochs, meta_data=meta_data, select_lead=[])
 

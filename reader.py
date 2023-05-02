@@ -166,7 +166,7 @@ class Reader:
                 return data['tracings'][filter_], annotation  # return filtered data along with the annotations
             return data['tracings'][:], annotation  # return all data along with the annotations
 
-    def read_hdf5(self, session, set_name, condition=None, random=False):
+    def read_hdf5(self, session, set_name, condition=None, random=False, verbose=True):
         """
         Read features and labels from an HDF5 file in a stratified manner.
 
@@ -208,7 +208,7 @@ class Reader:
                     exams_to_read = exams_to_read[-1]
                 x = np.empty((len(exams_to_read), n_targets, n_features, n_path))
                 y = np.empty((len(exams_to_read),), dtype=int)
-                for i, exam_idx in enumerate(tqdm(exams_to_read, desc=f'Batch {k+1 : >2}/{self.n_split}')):
+                for i, exam_idx in enumerate(tqdm(exams_to_read, desc=f'Batch {k+1 : >2}/{self.n_split}', disable=not verbose)):
                     features, x0 = decompress_hdf5(f['features'][exams[exam_idx]])
                     x[i] = features
                     y[i] = labels[exam_idx]

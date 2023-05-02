@@ -163,7 +163,7 @@ class DFG:
 
         self._verbose = kwargs.get('verbose', False)
 
-    # @utils.execution_time
+    @utils.execution_time
     def generate(self, y: np.ndarray) -> Tuple[Optional[List[np.ndarray]], Optional[List[np.ndarray]]]:
         """
         Main method that generates the features given a signal {y}
@@ -562,6 +562,7 @@ class DFG:
 
         idx = np.argmin(np.abs(relative_error - threshold))
         best_alpha = alpha_path[idx]
+        print(best_alpha)
         self._best_alpha.append(best_alpha)
 
     def _complete_fit(self, y, coef_path):
