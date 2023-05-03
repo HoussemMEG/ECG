@@ -35,18 +35,6 @@ class Classifier:
 
 
     def _classify(self, x, y, mode):
-        ## testing new idea
-        reader = Reader(batch_size=100)
-        data_healthy = np.zeros((1, 12, self._parameter['n_features'], 1))
-        for x_healthy, _ in reader.read_hdf5(session, 'validation', ['HEALTHY'], random=False):
-            data_healthy += np.mean(x_healthy[:, :, :, [-1]], axis=0)
-            del x_healthy
-        data_healthy /= 1
-        ## end of testing
-
-        for exam_i in range(len(x)):
-            x[exam_i, :, :, -1] -= data_healthy[0, :, :, 0]
-
         x_ = self._feature_selection(x)  # (n_exams, n_leads, n_pars, n_features)
         scores = []
 
