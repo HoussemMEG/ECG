@@ -562,7 +562,6 @@ class DFG:
 
         idx = np.argmin(np.abs(relative_error - threshold))
         best_alpha = alpha_path[idx]
-        print(best_alpha)
         self._best_alpha.append(best_alpha)
 
     def _complete_fit(self, y, coef_path):

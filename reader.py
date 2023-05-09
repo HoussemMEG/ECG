@@ -102,6 +102,7 @@ class Reader:
         #   if stratified = True, select <n x batch_size> for each class
         if random:
             if self._stratified:
+                print(self.description['label'].value_counts())
                 self.description = self.description.groupby('label', group_keys=False).\
                     apply(lambda z: z.sample(n=self._n * self._batch_size))
                 self._batch_size *= len(self.description['label'].unique())
@@ -192,6 +193,7 @@ class Reader:
             n_targets = len(f['features'][exams[0]]['u']['idx'].keys())
             n_features = f['features'][exams[0]]['u']['n_features'][0]
             n_path = f['features'][exams[0]]['u']['n_path'][0]
+            yield n_exams, n_targets, n_features, n_path
 
             # Generate splits for the exams based on the batch size
             add_batch = 0 if n_exams % self._batch_size == 0 else 1

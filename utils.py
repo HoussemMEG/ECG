@@ -402,15 +402,16 @@ def get_cmap(cmap, x, vmax):
     return cmap, vmin, vmax, x
 
 
-def convolution2d(image):
-    # Square kernel
-    # kernel = np.ones((10, 10))
-
+def convolution2d(image, kernel_type, l=5, sigma=1):
     # Gaussian kernel
-    l, sigma = 5, 1  # l = 7
-    ax = np.linspace(-(l - 1) / 2., (l - 1) / 2., l)
-    gauss = np.exp(-0.5 * np.square(ax) / np.square(sigma))
-    kernel = np.outer(gauss, gauss)
+    if kernel_type == 'gaussian':
+        ax = np.linspace(-(l - 1) / 2., (l - 1) / 2., l)
+        gauss = np.exp(-0.5 * np.square(ax) / np.square(sigma))
+        kernel = np.outer(gauss, gauss)
+
+    # Square kernel
+    elif kernel_type == 'square':
+        kernel = np.ones((l, l))
 
     kernel /= np.sum(kernel)
     m, n = kernel.shape

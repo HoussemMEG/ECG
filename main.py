@@ -27,16 +27,16 @@ def compute_SDF(working_q, output_q):
                       f_sampling=400,
                       version=1,
                       find_alpha=False,
-                      alpha=[0.00016, 0.00018, 0.00012, 0.00016, 0.00011, 0.00013, 0.00018, 0.00021, 0.00027, 0.00033, 0.00033, 0.00026],
+                      alpha=[0.00016, 0.00018, 0.00012, 0.00016, 0.00011, 0.00013, 0.00017, 0.00021, 0.00026, 0.00034, 0.00032, 0.00025],
                       model_freq=np.linspace(3, 45, 35, endpoint=True),
                       normalize=True,
                       damping=None,  # (under-damped 0.008 / over-damped 0.09)
                       fit_path=True, ols_fit=True,
                       fast=True,
-                      selection=0.02,  # 0.02
+                      selection=0.04,  # 0.02
                       selection_alpha=None,
                       omit=None,  # omit either 'x0' or 'u' from y_hat computation
-                      plot=(False, True), show=True, fig_name="fig name", save_fig=False,
+                      plot=(False, False), show=True, fig_name="fig name", save_fig=False,
                       verbose=verbose)
 
     while True:
@@ -58,15 +58,15 @@ def compute_SDF(working_q, output_q):
 
 if __name__ == '__main__':
     # Parameters
-    cpu_count = 5
-    conditions = ['HEALTHY']  # ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']
-    random = False
+    cpu_count = 3
+    conditions = []  # ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']
+    random = True
 
     # Init the class instances'
     session = datetime.now().strftime("%Y-%m-%d %H;%M")
-    session = "2023-04-06 66;66 test"
-    set_name = 'train'  # ['train', 'validation', 'test', 'learning']
-    reader = Reader(batch_size=1, n=1, stratified=True, set_name=set_name)
+    session = "2800 per category _ 35 freq _ long window"
+    set_name = 'validation'  # ['train', 'validation', 'test', 'learning']
+    reader = Reader(batch_size=699, n=1, stratified=True, set_name=set_name)  # 699
     plotter = Plotter(show=False, save=False)
     preprocess = Preprocess(fs=400, before=0.2, after=0.4)  # after = 0.1 or 0.4
     saver = Saver(session=session, set_name=set_name, conditions=Reader.ALL_CONDITIONS, save=True, verbose=True)
@@ -140,7 +140,12 @@ alpha for np.linspace(3, 45, 10, endpoint=True)
     (-0.2, 0.4)
         [0.00003, 0.00004, 0.00003, 0.00003, 0.00003, 0.00003, 0.00005, 0.00005, 0.00006, 0.00007, 0.00007, 0.00005], 
 
-
+alpha for np.linspace(3, 45, 70, endpoint=True) 
+    (-0.2, 0.4)
+    (-0.2, 0.1)
+        [0.00028, 0.00033, 0.00023, 0.00028, 0.00018, 0.00025, 0.00035, 0.00043, 0.00049, 0.00057, 0.00058, 0.00048],
+        
+        
 alpha for np.linspace(3, 45, 35, endpoint=True) 
     (-0.2, 0.4)
         [0.00016, 0.00018, 0.00012, 0.00016, 0.00011, 0.00013, 0.00017, 0.00021, 0.00026, 0.00034, 0.00032, 0.00025],

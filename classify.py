@@ -4,6 +4,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticD
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier, PassiveAggressiveClassifier
 from sklearn.decomposition import PCA
+import tensorflow as tf
 
 from reader import Reader
 from utils import print_c, read_parameters, convolution2d
@@ -15,16 +16,17 @@ np.set_printoptions(precision=2)
 
 
 class Classifier:
-    def __init__(self, session, selection, clf, condition=None, metric=None, random=True):
+    def __init__(self, session, selection, clf, condition=None, conv2d=None, use_all_data=False, metric=None, random=True):
         # Parameters
         self._metric = metric.lower() if metric else 'accuracy'
         self.session = session
         self._random = random
         self._condition = condition if condition else []
         self._selection = selection
+        self._conv2d = conv2d if conv2d else {'do_filter': False}
         self._parameter = read_parameters(session)
         self._clf_choice = clf
-        self._gg = None
+        self._use_all_data = use_all_data
 
         # Misc
         self._n_leads = 0
@@ -34,14 +36,13 @@ class Classifier:
         self._clf = []
 
 
-    def _classify(self, x, y, mode):
-        x_ = self._feature_selection(x)  # (n_exams, n_leads, n_pars, n_features)
+    def _classify(self, x_, y, mode):
         scores = []
 
         for i_lead in range(self._n_leads):
             for i_pars in range(self._n_pars):
                 x = x_[:, i_lead, i_pars, :]
-
+                print(x.shape)
                 if mode == 'learning':
                     # Init classifier
                     if len(self._clf) < self._n_pars * self._n_leads:
@@ -50,6 +51,15 @@ class Classifier:
                     else:
                         clf = self._clf[i_lead * self._n_leads + i_pars]
 
+                    # temporary here to test CNN
+                    x = np.array(np.split(x, self._selection['time'][1]-self._selection['time'][0], axis=1)).transpose((1, 0, 2))
+                    for i in range(len(y)):
+                        if y[i] == 6:
+                            y[i] = 1
+                    temp = np.zeros((y.size, 2))
+                    temp[np.arange(y.size), y] = 1
+                    y = temp
+
                     # Feature extraction
                     # x = self._feature_extraction(x)  # not completed
 
@@ -57,14 +67,7 @@ class Classifier:
                     if hasattr(clf, 'partial_fit'):
                         clf.partial_fit(x, y, classes=np.unique(y))
                     else:
-                        ## testing
-                        self._gg = self._set_clf(selection=self._clf_choice.upper())
-                        x = self._gg.fit_transform(x, y)
-                        Plotter.correlogram(x, y, show=True, save=False)
-                        print('training', x.shape)
-                        ## end of testing
                         clf.fit(x, y)
-
 
                     # Metrics
                     y_pred = clf.predict(x)
@@ -73,18 +76,13 @@ class Classifier:
 
                 if mode == 'evaluation':
                     clf = self._clf[i_lead * self._n_leads + i_pars]
-                    ## testing
-                    print('testing before fit transform', x.shape)
-                    x = self._gg.transform(x)
-                    print('testing after fit transform', x.shape)
-                    ## end of testing
 
                     # Metrics
                     y_pred = clf.predict(x)
                     score = self._score(y, y_pred)
                     print(f'{score = :.2f}')
                     pass
-        plt.show()
+
                 # Display results
 
     @staticmethod
@@ -102,13 +100,10 @@ class Classifier:
         output = pca.fit_transform(x)
         print('feature extraction output', output.shape)
         return output
-        # return np.max(x, axis=-1)[:, np.newaxis]
-        # return np.argmax(x, axis=-1)[:, np.newaxis]
-        # pass
 
 
-    @staticmethod
-    def _set_clf(selection):
+    # @staticmethod
+    def _set_clf(self, selection):
         """
         Method to perform the selection of the classifier.
         Available classifiers are:
@@ -120,18 +115,44 @@ class Classifier:
         :param selection: 'str' to choose the returned classifier.
         :return: clf
         """
+        # param = {'classifier': self._clf_choice}
+        # print(f'selection={self._selection},   conv2d={self._conv2d},   classifier={param}')
         if selection == 'LDA':
             return LinearDiscriminantAnalysis(solver='svd', shrinkage=None, priors=None, covariance_estimator=None,
                                               n_components=1)
         elif selection == 'QDA':
             return QuadraticDiscriminantAnalysis()
         elif selection == 'RF':
-            return RandomForestClassifier(max_depth=8, max_leaf_nodes=20, warm_start=False, random_state=42, n_jobs=-1)
+            max_depth = 20
+            max_leaf_nodes = 200
+            param = {'classifier': self._clf_choice, 'max_depth': max_depth, 'max_leaf_nodes': max_leaf_nodes}
+            print(f'selection={self._selection},   conv2d={self._conv2d},   classifier={param}')
+            return RandomForestClassifier(max_depth=max_depth, max_leaf_nodes=max_leaf_nodes, warm_start=False, random_state=42, n_jobs=-1)
         elif selection == 'SGD':
             return SGDClassifier()
         elif selection == 'PA':
             return PassiveAggressiveClassifier(n_jobs=-1)
+        elif selection == 'CNN':
+            input_shape = (self._selection['time'][1]-self._selection['time'][0],
+                           self._selection['frequency'][1]-self._selection['frequency'][0], 1)
+            num_classes = 2
 
+            model = tf.keras.models.Sequential([
+                tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape),
+                tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+                tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation='relu'),
+                tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(64, activation='relu'),
+                tf.keras.layers.Dense(num_classes, activation='softmax')
+            ])
+            model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+            return model
+        else:
+            param = {'classifier': 'adaBoost'}
+            print(f'selection={self._selection},   conv2d={self._conv2d},   classifier={param}')
+            from sklearn.ensemble import AdaBoostClassifier
+            return  AdaBoostClassifier(n_estimators=100)
 
     def _feature_selection(self, x):
         """
@@ -163,23 +184,18 @@ class Classifier:
             # temps shape: (n_exams, n_leads, n_parsimony, time, frequency)
             temp = np.array(np.split(x, self._parameter['n_point'] - 1, axis=-1)).transpose((1, 2, 3, 0, 4))
 
-            ## testing new idea
-            # for exam_i in range(len(temp)):
-            #     temp[exam_i, 0, 0, :, :] = convolution2d(temp[exam_i, 0, 0, :, :])
-            ## end of testing
+            ## IDEA of gaussian convolution
+            if self._conv2d['do_filter']:
+                for exam_i in range(len(temp)):
+                    temp[exam_i, 0, 0, :, :] = convolution2d(temp[exam_i, 0, 0, :, :], kernel_type=self._conv2d['type'],
+                                                             l=self._conv2d['l'], sigma=self._conv2d['sigma'])
 
             if any(self._selection['time']):
-                t_min = self._selection['time'][0] if self._selection['time'][0] is not None else 0
-                t_max = self._selection['time'][1] if self._selection['time'][1] is not None else temp.shape[3]
+                t_min, t_max = self._get_time_indexes()
                 temp = temp[:, :, :, t_min:t_max, ...]
 
             if any(self._selection['frequency']):
-                f_min = self._selection['frequency'][0] if self._selection['frequency'][0] is not None else 0
-                f_max = self._selection['frequency'][1] if self._selection['frequency'][1] is not None else temp.shape[4]
-                if isinstance(f_min, float):
-                    f_min = np.argmin(self._parameter['model_freq'] - f_min)
-                if isinstance(f_max, float):
-                    f_max = np.argmin(self._parameter['model_freq'] - f_max)
+                f_min, f_max = self._get_freq_indexes()
                 temp = temp[..., f_min:f_max]
             x = np.reshape(temp, (temp.shape[0], temp.shape[1], temp.shape[2], temp.shape[3] * temp.shape[4]))
 
@@ -200,12 +216,67 @@ class Classifier:
 
     def classify(self, mode, batch_size=10):
         print_c(f'{mode}', 'blue', bold=True)
-        reader = Reader(batch_size=batch_size * len(self._condition))
-
         mode_ = 'learning' if mode.lower() == 'train' else 'evaluation'
-        # Read the <mode> data and perform the core classification in learning mode
-        for x, y in reader.read_hdf5(self.session, mode, self._condition, random=self._random, verbose=False):
+
+        # Init reader and x, y for the case of use_all_data = True
+        reader = Reader(batch_size=batch_size * len(self._condition))
+        hdf5_batch_iterator = reader.read_hdf5(self.session, mode, self._condition, random=self._random, verbose=True)
+        x, y = self._init_x_y(hdf5_batch_iterator)
+
+        pointer = 0
+        for x_batch, y_batch in hdf5_batch_iterator:
+            x_batch = self._feature_selection(x_batch)  # (n_exams, n_leads, n_pars, n_features)
+            if self._use_all_data:
+                x[pointer:pointer + len(x_batch)] = x_batch
+                y[pointer:pointer + len(x_batch)] = y_batch
+                pointer += len(x_batch)
+            else:
+                # Regular batch classification
+                self._classify(x_batch, y_batch, mode=mode_)
+
+        # lighted ram load
+        del x_batch, y_batch
+
+        # Aggregate all exams in one batch (can only be possible if there is selection or low memory usage)
+        if self._use_all_data:
             self._classify(x, y, mode=mode_)
+
+    def _init_x_y(self, reader_hdf5):
+        n_exams, n_leads, n_features, n_pars = next(reader_hdf5)
+        if self._use_all_data:
+            if self._selection['lead']:
+                n_leads = len(self._selection['lead'])
+            if self._selection['parsimony']:
+                n_pars = len(self._selection['parsimony'])
+
+            if any(self._selection['time']) or any(self._selection['frequency']):
+                t_min, t_max = self._get_time_indexes()
+                f_min, f_max = self._get_freq_indexes()
+                n_features = (f_max - f_min) * (t_max - t_min)
+
+            if self._selection['merge_lead'] and n_leads > 1:
+                n_features *= n_leads
+                n_leads = 1
+
+            if self._selection['merge_pars'] and n_pars > 1:
+                n_features *= n_pars
+                n_pars = 1
+
+            return np.zeros((n_exams, n_leads, n_pars, n_features)), np.empty((n_exams,), dtype=np.int8)
+
+    def _get_time_indexes(self):
+        t_min = self._selection['time'][0] if self._selection['time'][0] is not None else 0
+        t_max = self._selection['time'][1] if self._selection['time'][1] is not None else self._parameter['n_point'] - 1
+        return t_min, t_max
+
+    def _get_freq_indexes(self):
+        f_min = self._selection['frequency'][0] if self._selection['frequency'][0] is not None else 0
+        f_max = self._selection['frequency'][1] if self._selection['frequency'][1] is not None else self._parameter['n_freq']
+        if isinstance(f_min, float):
+            f_min = np.argmin(self._parameter['model_freq'] - f_min)
+        if isinstance(f_max, float):
+            f_max = np.argmin(self._parameter['model_freq'] - f_max)
+        return f_min, f_max
 
     def _score(self, y_true, y_pred):
         """
@@ -231,18 +302,37 @@ class Classifier:
             return f1_score(y_true, y_pred) * 100
 
 
-selection = {'lead': [7],  # 8
-             'parsimony': [-1],  # -1
-             'time': (55, 70),  # (55, 70)
-             'frequency': (9, 35),  # (0, 35)
+selection = {'lead': [1],
+             'parsimony': [-1],
+             'time': (40, 76),
+             'frequency': (0, 25),
              'merge_pars':False,
              'merge_lead':False}
 
-# condition = ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']
-condition = ['SB', 'HEALTHY']
+conv2d = {'do_filter': True,
+          'type': 'gaussian',
+            'l': 5,
+            'sigma': 2}
 
-session = "2023-04-06 66;66 visualisation 100 70 freq"
-classifier = Classifier(session, selection, 'LDA', condition)
+# observations:
+#   20 freq
+#       1dAVb  (57, 78, 0, 15) lead: 1 5 7 9 10 11
+#       SB     (57, 76, 0, 12) lead: 8(12) 7(15) 10(12 + 80)
+#       ST     (60, 76, 3, 15) lead: 8
+#
+#   30 freq
+#       1dAVb  (40, 76, 0, 25) lead: 1 2 5 9 10
+#       SB     (40, 76, 0, 25) lead: 10 et (50, 78, 0, 16) lead: 7 8
+#       ST     () lead: / RIEN
+
+
+# condition = ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']
+condition = ['1dAVb', 'HEALTHY']
+
+# session = "2800 per category _ 20 freq _ short window"
+session = "2800 per category _ 35 freq _ long window"
+
+classifier = Classifier(session, selection, 'CNN', condition, conv2d=conv2d, use_all_data=True, random=False)
 classifier.classify('train', batch_size=100)
 classifier.classify('validation', batch_size=100)
 # classifier.classify('test', batch_size=15)
