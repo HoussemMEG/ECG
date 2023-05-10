@@ -42,7 +42,7 @@ class Classifier:
         for i_lead in range(self._n_leads):
             for i_pars in range(self._n_pars):
                 x = x_[:, i_lead, i_pars, :]
-                print(x.shape)
+
                 if mode == 'learning':
                     # Init classifier
                     if len(self._clf) < self._n_pars * self._n_leads:
@@ -76,6 +76,15 @@ class Classifier:
 
                 if mode == 'evaluation':
                     clf = self._clf[i_lead * self._n_leads + i_pars]
+
+                    # temporary here to test CNN
+                    x = np.array(np.split(x, self._selection['time'][1]-self._selection['time'][0], axis=1)).transpose((1, 0, 2))
+                    for i in range(len(y)):
+                        if y[i] == 6:
+                            y[i] = 1
+                    temp = np.zeros((y.size, 2))
+                    temp[np.arange(y.size), y] = 1
+                    y = temp
 
                     # Metrics
                     y_pred = clf.predict(x)
@@ -234,6 +243,10 @@ class Classifier:
                 # Regular batch classification
                 self._classify(x_batch, y_batch, mode=mode_)
 
+            # x = x_batch
+            # y = y_batch
+            # break
+
         # lighted ram load
         del x_batch, y_batch
 
@@ -291,6 +304,18 @@ class Classifier:
         # List of available metrics
         all_metrics = ['accuracy', 'f1']
 
+        ## testing CNN
+        if self._clf_choice == 'CNN':  #remove one hot encoding
+            for i, val in enumerate(y_pred):
+                if val[0] > val[1]:
+                    y_pred[i][0] = 1
+                    y_pred[i][1] = 0
+                else:
+                    y_pred[i][0] = 0
+                    y_pred[i][1] = 1
+            y_pred = [np.where(r==1)[0][0] for r in y_pred]
+            y_true = [np.where(r==1)[0][0] for r in y_true]
+
         # Check if the specified metric is valid
         if self._metric not in all_metrics:
             raise ValueError(f"Metric <{self._metric}> not found, only {all_metrics} are available")
@@ -309,7 +334,7 @@ selection = {'lead': [1],
              'merge_pars':False,
              'merge_lead':False}
 
-conv2d = {'do_filter': True,
+conv2d = {'do_filter': False,
           'type': 'gaussian',
             'l': 5,
             'sigma': 2}
