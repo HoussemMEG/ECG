@@ -12,6 +12,8 @@ from matplotlib.mlab import psd
 from scipy.integrate import simpson
 from matplotlib.colors import ListedColormap
 import matplotlib.pyplot as plt
+from operator import sub
+from matplotlib.patches import FancyBboxPatch
 
 # old stuff imports
 import os
@@ -47,6 +49,50 @@ def print_c(text, color=None, highlight=None, bold=False):
             print(termcolor.colored(text, color))
 
 
+def get_aspect(ax):
+    # Total figure size
+    figW, figH = ax.get_figure().get_size_inches()
+    # Axis size on figure
+    _, _, w, h = ax.get_position().bounds
+    # Ratio of display units
+    disp_ratio = (figH * h) / (figW * w)
+    # Ratio of data units
+    # Negative over negative because of the order of subtraction
+    data_ratio = sub(*ax.get_ylim()) / sub(*ax.get_xlim())
+    return data_ratio / disp_ratio
+
+def patch_figure(fig):
+    axes = fig.get_axes()
+    for i, ax in enumerate(axes):
+        for s in ax.spines:
+            axes[i].spines[s].set_visible(False)
+        p_bbox = FancyBboxPatch(xy=(0, 0), width=1, height=1,
+                                boxstyle="round, rounding_size=0.015, pad=0",
+                                ec="#1A1A1A", fc="white", fill=False, clip_on=False, lw=1,
+                                mutation_aspect=get_aspect(ax),
+                                transform=ax.transAxes, zorder=4)
+        axes[i].add_patch(p_bbox)
+        axes[i].patch = p_bbox
+    return fig
+
+
+def enlarge_axis_limits(fig):
+    axes = fig.get_axes()
+    for i, ax in enumerate(axes):
+        childs = ax.get_children()
+        print(childs)
+        if not any([isinstance(child, matplotlib.patches.Polygon) for child in childs]):
+            if any([isinstance(child, matplotlib.image.AxesImage) for child in childs]):
+                percent_x = 0.0
+                percent_y = 0.0
+            else:
+                percent_x = -0.025
+                percent_y = 0.06
+            # print([isinstance(child, plt.Line2D) for child in ax.get_children()])
+            x_lim, y_lim = ax.get_xlim(), ax.get_ylim()
+            ax.set_xlim([x_lim[0] - (x_lim[1] - x_lim[0]) * percent_x, x_lim[1] + (x_lim[1] - x_lim[0]) * percent_x])
+            ax.set_ylim([y_lim[0] - (y_lim[1] - y_lim[0]) * percent_y, y_lim[1] + (y_lim[1] - y_lim[0]) * percent_y])
+
 def _filter_signal_mod(b, a, signal, zi=None, check_phase=True, **kwargs):
     """
     Modification of _filter_signal in biosppy signals such that it takes 3D input and filter the 'axis=1' dimension
@@ -80,7 +126,6 @@ def index_to_time(arr, fs):
     for i in range(len(arr)):
         arr[i] = [elem/fs for elem in arr[i]]
     return arr
-
 
 def truncate_colormap(cmap, min_val=0.0, max_val=1.0, n=100):
     """

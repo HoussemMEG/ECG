@@ -29,7 +29,7 @@ class DFG:
     random.seed(42)
 
     def __init__(self,
-                 method: Optional[str],
+                 method: Optional[str]='LARS',
                  version=1,
                  f_sampling=None,
                  model_freq=None,

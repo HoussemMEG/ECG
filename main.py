@@ -36,7 +36,7 @@ def compute_SDF(working_q, output_q):
                       selection=0.04,  # 0.02
                       selection_alpha=None,
                       omit=None,  # omit either 'x0' or 'u' from y_hat computation
-                      plot=(False, False), show=True, fig_name="fig name", save_fig=False,
+                      plot=(False, True), show=True, fig_name="fig name", save_fig=False,
                       verbose=verbose)
 
     while True:
@@ -65,8 +65,8 @@ if __name__ == '__main__':
     # Init the class instances'
     session = datetime.now().strftime("%Y-%m-%d %H;%M")
     session = "2800 per category _ 35 freq _ long window"
-    set_name = 'validation'  # ['train', 'validation', 'test', 'learning']
-    reader = Reader(batch_size=699, n=1, stratified=True, set_name=set_name)  # 699
+    set_name = 'test'  # ['train', 'validation', 'test', 'learning']
+    reader = Reader(batch_size=680, n=1, stratified=True, set_name=set_name)  # 699
     plotter = Plotter(show=False, save=False)
     preprocess = Preprocess(fs=400, before=0.2, after=0.4)  # after = 0.1 or 0.4
     saver = Saver(session=session, set_name=set_name, conditions=Reader.ALL_CONDITIONS, save=True, verbose=True)
@@ -106,7 +106,8 @@ if __name__ == '__main__':
         for i, p in enumerate(processes):
             p.join()
             utils.print_c('Process {:} ended'.format(i + 1), 'green', bold=True)
-
+        plt.show()
+        break
     # Save the parameters of the preprocessing and the feature generator for replication purposes
     saver.save_json(preprocess.parameters, file_name='preprocessing_parameters')
     saver.save_json(feat_gen_param, file_name='DFG_parameters')

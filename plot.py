@@ -17,7 +17,6 @@ from utils import index_to_time, truncate_colormap, set_ticks
 matplotlib.use('QT5agg')
 sliders = []
 
-
 class Plotter:
     LEADS = np.array(['DI', 'DII', 'DIII', 'AVR', 'AVL', 'AVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'])
 
@@ -293,12 +292,10 @@ class Plotter:
 
         # 1) plotting y and y_hat
         line = Plotter.plot_y_hat(y, y_hat[:, 0], ax=axes[0], fig=fig)
-        x_axis_add = 0.01 * n_point if not cmap_choice == 'black_white' else 0.5
-        axes[0].set_xlim([-x_axis_add, n_point - 1 + x_axis_add])
 
         # 2) plotting the activations
         mat = axes[1].imshow(x[..., 0], interpolation='nearest', aspect='auto', origin='upper',  # 'auto'  'equal'
-                             cmap=cmap, vmax=vmax, vmin=vmin)
+                             cmap=cmap, vmax=vmax, vmin=vmin, zorder=1)
         axes[1].xaxis.set_minor_locator(AutoMinorLocator())
         y_ticks = set_ticks(n_freq)
         axes[1].set_yticks(y_ticks)
@@ -320,9 +317,9 @@ class Plotter:
 
         slider = Slider(plt.axes([0.25, 0.05, 0.5, 0.03]), 'Alpha value.', 0, y_hat.shape[-1]-1, valinit=0, valfmt='%d')
         slider.on_changed(update_wave)
-
         _save_figure(fig, fig_name, path='./figures/', save=save, show=show)
         sliders.append(slider)
+
 
     @staticmethod
     def plot_control_only(x=None, freq=None, cmap='blue_red', condition=None, fig_name=None, filter=False,
@@ -530,6 +527,7 @@ class Plotter:
         _save_figure(fig, figure_name='correlogram', save=save, show=show)
 
     def _save_figure(self, fig, figure_name):
+        utils.enlarge_axis_limits(fig)  # enlarge axis limits
         if self._save:
             path = f'{self._save_path}/{figure_name}.png'  # .svg'
             fig.savefig(path, bbox_inches='tight')
@@ -537,8 +535,8 @@ class Plotter:
         if not self._show:
             plt.close()
 
-
 def _save_figure(fig, figure_name, path='./figures', save=False, show=False):
+    utils.enlarge_axis_limits(fig)  # enlarge axis limits
     if save:
         path = f'{path}/{figure_name}.png'  # .svg'
         fig.savefig(path, bbox_inches='tight')
