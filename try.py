@@ -35,7 +35,7 @@ feature_gen = DFG(method='LARS',
                   version=1,
                   find_alpha=False,
                   alpha=[0.00000001],  # 0.0008
-                  model_freq=[f], # np.linspace(0.1, fs/2, 50),
+                  model_freq=[f, 2*f], # np.linspace(0.1, fs/2, 50),
                   normalize=True,
                   damping=None,  # (under-damped 0.008 / over-damped 0.09)
                   fit_path=True, ols_fit=True,

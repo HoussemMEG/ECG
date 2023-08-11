@@ -32,11 +32,11 @@ def compute_SDF(working_q, output_q):
                       normalize=True,
                       damping=None,  # (under-damped 0.008 / over-damped 0.09)
                       fit_path=True, ols_fit=True,
-                      fast=True,
-                      selection=0.04,  # 0.02
+                      fast=False,
+                      selection=[],  # 0.02
                       selection_alpha=None,
                       omit=None,  # omit either 'x0' or 'u' from y_hat computation
-                      plot=(False, True), show=True, fig_name="fig name", save_fig=False,
+                      plot=(False, True), show=True, fig_name="fig name", save_fig=True,
                       verbose=verbose)
 
     while True:
@@ -59,17 +59,17 @@ def compute_SDF(working_q, output_q):
 if __name__ == '__main__':
     # Parameters
     cpu_count = 3
-    conditions = []  # ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']
+    conditions = ['HEALTHY']  # ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']
     random = True
 
     # Init the class instances'
     session = datetime.now().strftime("%Y-%m-%d %H;%M")
     session = "2800 per category _ 35 freq _ long window"
     set_name = 'test'  # ['train', 'validation', 'test', 'learning']
-    reader = Reader(batch_size=680, n=1, stratified=True, set_name=set_name)  # 699
+    reader = Reader(batch_size=1, n=1, stratified=True, set_name=set_name)  # 699
     plotter = Plotter(show=False, save=False)
     preprocess = Preprocess(fs=400, before=0.2, after=0.4)  # after = 0.1 or 0.4
-    saver = Saver(session=session, set_name=set_name, conditions=Reader.ALL_CONDITIONS, save=True, verbose=True)
+    saver = Saver(session=session, set_name=set_name, conditions=Reader.ALL_CONDITIONS, save=False, verbose=True)
 
     tic = time.perf_counter()
     # Read data

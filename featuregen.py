@@ -608,7 +608,11 @@ class DFG:
 
         for target_idx in range(self._n_target):
             fig_name = self._fig_name.split('.')[0] + '_' + str(target_idx)
-            selection = self._idx_selection[target_idx] if self._idx_selection else None
+            selection = None
+            if self._idx_selection:
+                if not isinstance(self._idx_selection[target_idx], range):
+                    selection = self._idx_selection[target_idx]
+
             if self._plot[0] and self._fit_path and self._method == 'LARS' and not self._fast:
                 Plotter.plot_alpha(self.alpha_path[target_idx], self.coef_path[target_idx],
                                    self.residue_path[target_idx], fig_name, self._show, self._save, selection)

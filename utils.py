@@ -19,8 +19,7 @@ from matplotlib.patches import FancyBboxPatch
 import os
 import json
 from scipy.stats import kurtosis, skew
-from tabulate import tabulate  # newly installed
-
+from tabulate import tabulate
 
 def execution_time(function):
     def my_function(*args, **kwargs):
@@ -68,7 +67,7 @@ def patch_figure(fig):
             axes[i].spines[s].set_visible(False)
         p_bbox = FancyBboxPatch(xy=(0, 0), width=1, height=1,
                                 boxstyle="round, rounding_size=0.015, pad=0",
-                                ec="#1A1A1A", fc="white", fill=False, clip_on=False, lw=1,
+                                ec="#1A1A1A", fc="white", fill=False, clip_on=False, lw=1.5,
                                 mutation_aspect=get_aspect(ax),
                                 transform=ax.transAxes, zorder=4)
         axes[i].add_patch(p_bbox)
@@ -80,7 +79,6 @@ def enlarge_axis_limits(fig):
     axes = fig.get_axes()
     for i, ax in enumerate(axes):
         childs = ax.get_children()
-        print(childs)
         if not any([isinstance(child, matplotlib.patches.Polygon) for child in childs]):
             if any([isinstance(child, matplotlib.image.AxesImage) for child in childs]):
                 percent_x = 0.0

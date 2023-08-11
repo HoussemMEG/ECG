@@ -15,6 +15,38 @@ from utils import index_to_time, truncate_colormap, set_ticks
 
 # Use QT5agg backend for matplotlib
 matplotlib.use('QT5agg')
+
+# Font update for all figures
+font = {'family': 'Latin Modern Roman',
+        'weight': 'normal',
+        'size': 12}
+matplotlib.rc('font', **font)
+
+# SMALL_SIZE = 8
+# MEDIUM_SIZE = 10
+# BIGGER_SIZE = 12
+#
+# plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+# plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+# plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+# plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+# plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+# plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+# plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+
+# Ticks size modification
+matplotlib.rcParams['xtick.major.size'] = 7
+matplotlib.rcParams['xtick.major.width'] = 1.3
+matplotlib.rcParams['xtick.minor.size'] = 4
+matplotlib.rcParams['xtick.minor.width'] = 1.1
+matplotlib.rcParams['ytick.major.size'] = 7
+matplotlib.rcParams['ytick.major.width'] = 1.3
+matplotlib.rcParams['ytick.minor.size'] = 4
+matplotlib.rcParams['ytick.minor.width'] = 1.1
+# matplotlib.rcParams.update({'font.size': 11})
+
+# Slider container
 sliders = []
 
 class Plotter:
@@ -186,36 +218,36 @@ class Plotter:
         # Plot alpha decay in top sub-plot
         fig, axes = plt.subplots(figsize=(19.2 / 1.3, 10.8 / 1.3), nrows=2, layout='constrained')
         axes[0].plot(alphas)
-        axes[0].set_xlabel("Iteration", fontsize=13)
-        axes[0].set_ylabel("$\\alpha$", fontsize=13)
+        axes[0].set_xlabel("Iteration")
+        axes[0].set_ylabel("$\\alpha$")
         axes[0].xaxis.set_minor_locator(AutoMinorLocator())
         axes[0].xaxis.grid(True, which='minor', linestyle=':', linewidth=0.3)
         axes[0].xaxis.grid(True, which='major', linestyle='-', linewidth=0.4)
         axes[0].yaxis.grid(True, which='major', linestyle='-', linewidth=0.4)
-        if selection is not None:
+        if selection:
             axes[0].scatter(selection, alphas[selection], c='k', marker='x', zorder=9, alpha=0.7)
 
         # Plot epsilon in blue in bottom sub-plot
         color = 'tab:blue'
         axes[1].plot(residue_path, color=color, zorder=1)
-        axes[1].set_xlabel("Iteration", fontsize=13)
+        axes[1].set_xlabel("Iteration")
         axes[1].set_ylabel("$\\frac{1}{2N}|y-\\hat{y}|_2^2 + \\alpha|\hat{u}|$", fontsize=13, color=color)
         axes[1].tick_params(axis='y', labelcolor=color)
         axes[1].xaxis.grid(True, which='major', linestyle='-', linewidth=0.4)
         axes[1].xaxis.grid(True, which='minor', linestyle=':', linewidth=0.3)
-        if selection is not None:
+        if selection:
             axes[1].scatter(selection, residue_path[selection], c='k', marker='x', zorder=9, alpha=0.7)
 
         # Plot of the number of non-zero entries of \beta in red in bottom sub-plot
         color = 'tab:red'
         ax = axes[1].twinx()
         ax.plot(np.count_nonzero(coef_path, axis=0), color=color, zorder=2)
-        ax.set_xlabel("Iteration", fontsize=13)
-        ax.set_ylabel("# of parameters", fontsize=13, color=color)
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("# of parameters",color=color)
         ax.tick_params(axis='y', labelcolor=color)
         ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.yaxis.grid(True, which='major', linestyle='-', linewidth=0.4)
-        if selection is not None:
+        if selection:
             ax.scatter(selection, np.count_nonzero(coef_path, axis=0)[selection],
                        c='k', marker='x', zorder=9, alpha=0.7)
 
@@ -291,10 +323,10 @@ class Plotter:
         fig.subplots_adjust(bottom=0.15, left=0.075, right=0.96, top=0.95)
 
         # 1) plotting y and y_hat
-        line = Plotter.plot_y_hat(y, y_hat[:, 0], ax=axes[0], fig=fig)
+        line = Plotter.plot_y_hat(y, y_hat[:, -1], ax=axes[0], fig=fig)
 
         # 2) plotting the activations
-        mat = axes[1].imshow(x[..., 0], interpolation='nearest', aspect='auto', origin='upper',  # 'auto'  'equal'
+        mat = axes[1].imshow(x[..., -1], interpolation='nearest', aspect='auto', origin='upper',  # 'auto'  'equal'
                              cmap=cmap, vmax=vmax, vmin=vmin, zorder=1)
         axes[1].xaxis.set_minor_locator(AutoMinorLocator())
         y_ticks = set_ticks(n_freq)
@@ -315,7 +347,7 @@ class Plotter:
             fig.canvas.draw_idle()
             return mat
 
-        slider = Slider(plt.axes([0.25, 0.05, 0.5, 0.03]), 'Alpha value.', 0, y_hat.shape[-1]-1, valinit=0, valfmt='%d')
+        slider = Slider(plt.axes([0.25, 0.05, 0.5, 0.03]), 'Alpha value.', 0, y_hat.shape[-1]-1, valinit=y_hat.shape[-1]-1, valfmt='%d')
         slider.on_changed(update_wave)
         _save_figure(fig, fig_name, path='./figures/', save=save, show=show)
         sliders.append(slider)
@@ -529,7 +561,7 @@ class Plotter:
     def _save_figure(self, fig, figure_name):
         utils.enlarge_axis_limits(fig)  # enlarge axis limits
         if self._save:
-            path = f'{self._save_path}/{figure_name}.png'  # .svg'
+            path = f'{self._save_path}/{figure_name}.pdf'  # .svg'
             fig.savefig(path, bbox_inches='tight')
             print("Figure saved at : {:}".format(path))
         if not self._show:
@@ -538,7 +570,7 @@ class Plotter:
 def _save_figure(fig, figure_name, path='./figures', save=False, show=False):
     utils.enlarge_axis_limits(fig)  # enlarge axis limits
     if save:
-        path = f'{path}/{figure_name}.png'  # .svg'
+        path = f'{path}/{figure_name}.pdf'  # .svg'
         fig.savefig(path, bbox_inches='tight')
         print("Figure saved at : {:}".format(path))
     if not show:
