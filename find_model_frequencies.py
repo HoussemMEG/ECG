@@ -17,12 +17,12 @@ matplotlib.use('QT5agg')
 
 
 # parameters
-m_pendulum = 15
+m_pendulum = 35
 leads = np.array(['DI', 'DII', 'DIII', 'AVR', 'AVL', 'AVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'])
 
 # init the class instances
 reader = Reader(batch_size=500, n=1)
-plotter = Plotter(show=True, save=False)
+plotter = Plotter(show=True, save=True)
 preprocess = Preprocess(fs=400, before=0.2, after=0.4)
 
 condition = ['HEALTHY']  # ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']

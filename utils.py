@@ -285,7 +285,7 @@ def init_working_q(epochs, exams_id, cpu_count):
     working_q = Queue()
     # load work to be done in the working queue, each signal is sent with its corresponding exam_id
     for i, y in enumerate(epochs):
-        y = np.mean(y, axis=0)
+        # y = np.mean(y, axis=0)
         working_q.put((exams_id[i], y))
     # add sentinel values to signal the end of the queue
     for _ in range(cpu_count):
@@ -306,10 +306,17 @@ def output_q_handler(output_q, meta_data, cpu_count, saver, conditions):
     :return: feat_gen_param: feature generation parameters to be saved in the session (for results replication)
     """
     none_count = 0
+    # U = []
     while True:
         res = output_q.get()
         if res is not None and none_count != cpu_count:  # if features encountered
             (exam_id, features, x0) = res
+            # gg_s = np.array(decompress(features))[0, :, -1]
+            # gg_s = np.power(gg_s, 2)
+            # gg_s = np.reshape(gg_s, (239, 30))
+            # gg_s = np.sum(gg_s, axis=0)
+            # U.append(gg_s)
+
             label_name = meta_data.loc[meta_data.exam_id == exam_id, 'label'].to_numpy()
             label = conditions.index(label_name)
             saver.save(exam_id, features, x0, label)
@@ -318,6 +325,13 @@ def output_q_handler(output_q, meta_data, cpu_count, saver, conditions):
             if none_count == cpu_count:
                 feat_gen_param = output_q.get()
                 break
+    # from plot import Plotter
+    # plotter = Plotter(show=True, save=True)
+    # f = np.linspace(0.5, 45, 30, endpoint=True)
+    # plotter.plot_psd(U, f, 'title')
+    # U = np.mean(np.array(U), axis=0)
+    # fig, ax = plt.subplots()
+    # ax.plot(f, U)
 
     return feat_gen_param
 

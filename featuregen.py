@@ -730,8 +730,6 @@ class DFG:
     def __del__(self):
         if self._find_alpha and self._best_alpha:
             for target in range(self._n_target):
-                # utils.print_c('best alpha of channel {:<2} is {:}'
-                #               .format(target, self._best_alpha[target::self._n_target]), 'yellow')
                 utils.print_c('best alpha of channel {:<2} is {:.5f}'
                               .format(target, np.mean(self._best_alpha[target::self._n_target])), 'yellow')
             print('')

@@ -17,10 +17,10 @@ from utils import index_to_time, truncate_colormap, set_ticks
 matplotlib.use('QT5agg')
 
 # Font update for all figures
-font = {'family': 'Latin Modern Roman',
-        'weight': 'normal',
-        'size': 12}
-matplotlib.rc('font', **font)
+# font = {#'family': 'Latin Modern Roman',
+#         'weight': 'normal',
+#         'size': 12}
+# matplotlib.rc('font', **font)
 
 # SMALL_SIZE = 8
 # MEDIUM_SIZE = 10
@@ -36,14 +36,14 @@ matplotlib.rc('font', **font)
 
 
 # Ticks size modification
-matplotlib.rcParams['xtick.major.size'] = 7
-matplotlib.rcParams['xtick.major.width'] = 1.3
-matplotlib.rcParams['xtick.minor.size'] = 4
-matplotlib.rcParams['xtick.minor.width'] = 1.1
-matplotlib.rcParams['ytick.major.size'] = 7
-matplotlib.rcParams['ytick.major.width'] = 1.3
-matplotlib.rcParams['ytick.minor.size'] = 4
-matplotlib.rcParams['ytick.minor.width'] = 1.1
+# matplotlib.rcParams['xtick.major.size'] = 7
+# matplotlib.rcParams['xtick.major.width'] = 1.3
+# matplotlib.rcParams['xtick.minor.size'] = 4
+# matplotlib.rcParams['xtick.minor.width'] = 1.1
+# matplotlib.rcParams['ytick.major.size'] = 7
+# matplotlib.rcParams['ytick.major.width'] = 1.3
+# matplotlib.rcParams['ytick.minor.size'] = 4
+# matplotlib.rcParams['ytick.minor.width'] = 1.1
 # matplotlib.rcParams.update({'font.size': 11})
 
 # Slider container
@@ -406,10 +406,7 @@ class Plotter:
         for i in range(n_category):
             if filter:
                 for j in range(n_lead):
-                    # x[i, j, 30:55, 200:225, -1] = np.ones((25, 25))
-                    x[i, j, -5, -10, -1] = 0.01
-                    # if i == 2:
-                    x[i, j, :, :, -1] = utils.convolution2d(x[i, j, :, :, -1])
+                    x[i, j, :, :, -1] = utils.convolution2d(x[i, j, :, :, -1], kernel_type='gaussian')
 
             if any(select):
                 rect = plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin, linestyle='--', fill='forestgreen',
@@ -419,7 +416,12 @@ class Plotter:
             mat = axes[i].imshow(x[i, 0, ..., -1], interpolation='nearest', aspect='auto', origin='upper',  # 'auto'  'equal'
                                  cmap=cmap, vmax=vmax, vmin=vmin)
             mats.append(mat)
+            # from index to temporal x-axis
+            axes[i].set_xticks(np.arange(0, 240, 40))
+            axes[i].set_xticklabels(['0.2', '-0.1', '0.0', '0.1', '0.2', '0.3'])
+
             axes[i].xaxis.set_minor_locator(AutoMinorLocator())
+            # axes[i].xaxis.set_minor_formatter('{x:.0f}')
             y_ticks = set_ticks(n_freq)
             axes[i].set_yticks(y_ticks)
             y_labels = ['{:1.1f}'.format(freq[int(idx)]) if 0 <= int(idx) < n_freq else 'pb' for idx in axes[i].get_yticks()]
@@ -559,7 +561,7 @@ class Plotter:
         _save_figure(fig, figure_name='correlogram', save=save, show=show)
 
     def _save_figure(self, fig, figure_name):
-        utils.enlarge_axis_limits(fig)  # enlarge axis limits
+        # utils.enlarge_axis_limits(fig)  # enlarge axis limits
         if self._save:
             path = f'{self._save_path}/{figure_name}.pdf'  # .svg'
             fig.savefig(path, bbox_inches='tight')
@@ -568,7 +570,7 @@ class Plotter:
             plt.close()
 
 def _save_figure(fig, figure_name, path='./figures', save=False, show=False):
-    utils.enlarge_axis_limits(fig)  # enlarge axis limits
+    # utils.enlarge_axis_limits(fig)  # enlarge axis limits
     if save:
         path = f'{path}/{figure_name}.pdf'  # .svg'
         fig.savefig(path, bbox_inches='tight')

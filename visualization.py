@@ -19,25 +19,29 @@ session = ["2023-04-06 66;66 200 of each small window",
            "2023-04-06 66;66 test 25 short window",
            "2023-04-06 66;66 test 10 small windows",
            "2800 per category _ 20 freq _ short window",
-           "2800 per category _ 35 freq _ long window"][-1]
+           "2800 per category _ 35 freq _ long window",
+           "100 per category 20 freq",
+           "500 per category _ 23 freq _ long window",
+           "560 per category _ 25 freq _ long window",
+           "2800(last) per category _ 25 freq _ long window"][-1]
 
 tic = time.perf_counter()
 
-condition = ['1dAVb', 'HEALTHY', 'SB', 'ST']
-all_category = [0, 6, 3, 5]
+# condition = ['1dAVb', 'HEALTHY', 'SB', 'ST']
+# all_category = [0, 6, 3, 5]
 
-# condition = ['1dAVb', 'RBBB', 'LBBB', 'HEALTHY', 'SB', 'AF', 'ST']
-# all_category = [0, 1, 2, 6, 3, 4, 5]
+condition = ['1dAVb', 'RBBB', 'LBBB', 'HEALTHY', 'SB', 'AF', 'ST']
+all_category = [0, 1, 2, 6, 3, 4, 5]
 
 
-batch_size = 40
+batch_size = 100
 plotter = Plotter()
 parameters = read_parameters(session)
 
-diff = True
-compare_healthy = True
-filter_ = False and diff
-focus_category = 6
+diff = False
+compare_healthy = False
+filter_ = True and diff
+focus_category = 6  # 6 healthy
 focus_category = all_category.index(focus_category)
 vmax = 0.02 if not diff else 0.005
 
@@ -78,7 +82,7 @@ for x_train, y_train in hdf5_batch_iterator:
         data[i] += np.mean(x_train[y_train == category], axis=0)
 
     counter += 1
-    if counter == 10:
+    if counter == 100:
         break
 del x_train, y_train
 
@@ -100,8 +104,7 @@ if diff and compare_healthy:
 
 
 plotter.plot_control_only(x=data, freq=parameters['model_freq'], cmap='blue_red', condition=condition,
-                          filter=filter_, select=(50, 78, 0, 16),  # (time_min, time_max, freq_min, freq_max)
+                          filter=filter_, select=(None, None, None, None),  # (time_min, time_max, freq_min, freq_max)
                           show=True, save=False, vmax=vmax)
 
 plt.show()
-

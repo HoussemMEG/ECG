@@ -1,9 +1,10 @@
 import numpy as np
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.linear_model import SGDClassifier, PassiveAggressiveClassifier
 from sklearn.decomposition import PCA
+from sklearn.cluster import MiniBatchKMeans, Birch
 import tensorflow as tf
 
 from reader import Reader
@@ -16,7 +17,8 @@ np.set_printoptions(precision=2)
 
 
 class Classifier:
-    def __init__(self, session, selection, clf, condition=None, conv2d=None, use_all_data=False, metric=None, random=True):
+    def __init__(self, session, selection, clf, condition=None, conv2d=None, use_all_data=False, metric=None, random=True,
+                 clusters=None):
         # Parameters
         self._metric = metric.lower() if metric else 'accuracy'
         self.session = session
@@ -31,6 +33,7 @@ class Classifier:
         # Misc
         self._n_leads = 0
         self._n_pars = 0
+        self._clusters = clusters
 
         # Containers
         self._clf = []
@@ -52,20 +55,22 @@ class Classifier:
                         clf = self._clf[i_lead * self._n_leads + i_pars]
 
                     # temporary here to test CNN
-                    x = np.array(np.split(x, self._selection['time'][1]-self._selection['time'][0], axis=1)).transpose((1, 0, 2))
-                    for i in range(len(y)):
-                        if y[i] == 6:
-                            y[i] = 1
-                    temp = np.zeros((y.size, 2))
-                    temp[np.arange(y.size), y] = 1
-                    y = temp
+                    if self._clf_choice == 'CNN':
+                        x = np.array(np.split(x, self._selection['time'][1]-self._selection['time'][0], axis=1)).transpose((1, 0, 2))
+                        for i in range(len(y)):
+                            if y[i] == 6:
+                                y[i] = 1
+                        temp = np.zeros((y.size, 2))
+                        temp[np.arange(y.size), y] = 1
+                        y = temp
 
                     # Feature extraction
                     # x = self._feature_extraction(x)  # not completed
 
                     # Fit classifier to data
-                    if hasattr(clf, 'partial_fit'):
-                        clf.partial_fit(x, y, classes=np.unique(y))
+                    if hasattr(clf, 'partial_fit') and not self._use_all_data:
+                        print('Partially fitting')
+                        clf.partial_fit(x, y)  #, classes=np.unique(y))
                     else:
                         clf.fit(x, y)
 
@@ -77,14 +82,18 @@ class Classifier:
                 if mode == 'evaluation':
                     clf = self._clf[i_lead * self._n_leads + i_pars]
 
-                    # temporary here to test CNN
-                    x = np.array(np.split(x, self._selection['time'][1]-self._selection['time'][0], axis=1)).transpose((1, 0, 2))
-                    for i in range(len(y)):
-                        if y[i] == 6:
-                            y[i] = 1
-                    temp = np.zeros((y.size, 2))
-                    temp[np.arange(y.size), y] = 1
-                    y = temp
+                    # # temporary here to test CNN
+                    if self._clf_choice == 'CNN':
+                        x = np.array(np.split(x, self._selection['time'][1]-self._selection['time'][0], axis=1)).transpose((1, 0, 2))
+                        for i in range(len(y)):
+                            if y[i] == 6:
+                                y[i] = 1
+                        temp = np.zeros((y.size, 2))
+                        temp[np.arange(y.size), y] = 1
+                        y = temp
+
+                    # Feature extraction
+                    # x = self._feature_extraction(x)  # not completed
 
                     # Metrics
                     y_pred = clf.predict(x)
@@ -101,10 +110,10 @@ class Classifier:
         :param x:
         :return:
         """
-        # a = np.mean(x, axis=-1)[:, np.newaxis]
-        # b = np.max(x, axis=-1)[:, np.newaxis]
-        # c = np.argmin(x, axis=-1)[:, np.newaxis]
-        # return np.concatenate((a, b, c), axis=-1)
+        a = np.mean(x, axis=-1)[:, np.newaxis]
+        b = np.max(x, axis=-1)[:, np.newaxis]
+        c = np.argmin(x, axis=-1)[:, np.newaxis]
+        return np.concatenate((a, b, c), axis=-1)
         pca = PCA(n_components=3)
         output = pca.fit_transform(x)
         print('feature extraction output', output.shape)
@@ -126,6 +135,7 @@ class Classifier:
         """
         # param = {'classifier': self._clf_choice}
         # print(f'selection={self._selection},   conv2d={self._conv2d},   classifier={param}')
+
         if selection == 'LDA':
             return LinearDiscriminantAnalysis(solver='svd', shrinkage=None, priors=None, covariance_estimator=None,
                                               n_components=1)
@@ -139,6 +149,11 @@ class Classifier:
             return RandomForestClassifier(max_depth=max_depth, max_leaf_nodes=max_leaf_nodes, warm_start=False, random_state=42, n_jobs=-1)
         elif selection == 'SGD':
             return SGDClassifier()
+        elif selection == 'KMEANS':
+            batch_size = 1280  # 256 * 5
+            return MiniBatchKMeans(n_clusters=self._clusters, batch_size=batch_size)
+        elif selection == 'BIRCH':
+            return Birch(threshold=0.5, branching_factor=50, n_clusters=self._clusters)
         elif selection == 'PA':
             return PassiveAggressiveClassifier(n_jobs=-1)
         elif selection == 'CNN':
@@ -153,15 +168,15 @@ class Classifier:
                 tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
                 tf.keras.layers.Flatten(),
                 tf.keras.layers.Dense(64, activation='relu'),
-                tf.keras.layers.Dense(num_classes, activation='softmax')
-            ])
+                tf.keras.layers.Dense(num_classes, activation='softmax')])
             model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
             return model
-        else:
-            param = {'classifier': 'adaBoost'}
+        elif selection == 'ADABOOST':
+            n_estimators = 100
+            learning_rate = 0.5
+            param = {'classifier': 'adaBoost', 'n_estimators': n_estimators, 'lr':learning_rate}
             print(f'selection={self._selection},   conv2d={self._conv2d},   classifier={param}')
-            from sklearn.ensemble import AdaBoostClassifier
-            return  AdaBoostClassifier(n_estimators=100)
+            return  AdaBoostClassifier(n_estimators=n_estimators, learning_rate=learning_rate)
 
     def _feature_selection(self, x):
         """
@@ -225,7 +240,7 @@ class Classifier:
 
     def classify(self, mode, batch_size=10):
         print_c(f'{mode}', 'blue', bold=True)
-        mode_ = 'learning' if mode.lower() == 'train' else 'evaluation'
+        mode_ = 'learning' if (mode.lower() == 'train' or mode.lower() == 'learning') else 'evaluation'
 
         # Init reader and x, y for the case of use_all_data = True
         reader = Reader(batch_size=batch_size * len(self._condition))
@@ -302,7 +317,7 @@ class Classifier:
         :raises ValueError: if the specified metric is not one of ['accuracy', 'f1'].
         """
         # List of available metrics
-        all_metrics = ['accuracy', 'f1']
+        all_metrics = ['accuracy', 'f1', 'precision']
 
         ## testing CNN
         if self._clf_choice == 'CNN':  #remove one hot encoding
@@ -325,39 +340,38 @@ class Classifier:
             return accuracy_score(y_true, y_pred) * 100
         elif self._metric == 'f1':
             return f1_score(y_true, y_pred) * 100
+        elif self._metric == 'precision':
+            return precision_score(y_true, y_pred, average=None) * 100
 
 
-selection = {'lead': [1],
+selection = {'lead': [6],
              'parsimony': [-1],
-             'time': (40, 76),
-             'frequency': (0, 25),
+             'time': (39, 104),
+             'frequency': (None, None),
              'merge_pars':False,
              'merge_lead':False}
 
-conv2d = {'do_filter': False,
+conv2d = {'do_filter': True,
           'type': 'gaussian',
             'l': 5,
             'sigma': 2}
 
-# observations:
-#   20 freq
-#       1dAVb  (57, 78, 0, 15) lead: 1 5 7 9 10 11
-#       SB     (57, 76, 0, 12) lead: 8(12) 7(15) 10(12 + 80)
-#       ST     (60, 76, 3, 15) lead: 8
-#
-#   30 freq
-#       1dAVb  (40, 76, 0, 25) lead: 1 2 5 9 10
-#       SB     (40, 76, 0, 25) lead: 10 et (50, 78, 0, 16) lead: 7 8
-#       ST     () lead: / RIEN
+print_c('lead {:}'.format(selection['lead']), 'yellow', bold=True)
+print_c('time {:}'.format(selection['time']), 'yellow', bold=True)
+print_c('frequency {:}'.format(selection['frequency']), 'yellow', bold=True)
+print_c('do_filter {:}'.format(conv2d['do_filter']), 'yellow', bold=True)
 
 
-# condition = ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']
-condition = ['1dAVb', 'HEALTHY']
+# condition = ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST', 'HEALTHY']  [0, 1, 2, 3, 4, 5, 6]
+condition = ['HEALTHY', 'RBBB']
 
 # session = "2800 per category _ 20 freq _ short window"
-session = "2800 per category _ 35 freq _ long window"
+# session = "2800 per category _ 35 freq _ long window"
+session = "2800(last) per category _ 25 freq _ long window"
 
-classifier = Classifier(session, selection, 'CNN', condition, conv2d=conv2d, use_all_data=True, random=False)
-classifier.classify('train', batch_size=100)
-classifier.classify('validation', batch_size=100)
-# classifier.classify('test', batch_size=15)
+classifier = Classifier(session, selection, 'adaboost', condition, conv2d=conv2d, use_all_data=True, random=False,  # 'Birch' 'Kmeans'
+                                            clusters=len(condition), metric='accuracy')
+# classifier.classify('train', batch_size=100)
+classifier.classify('learning', batch_size=100)
+# classifier.classify('validation', batch_size=100)
+classifier.classify('test', batch_size=100)
